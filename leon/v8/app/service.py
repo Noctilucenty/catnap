@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
@@ -27,6 +28,11 @@ from .models import (
 from .calendar import check_availability, create_booking_from_session
 from .openclaw_adapter import parse_openclaw_response, submit_ticket
 from .state_machine import IntakeStateMachine, PROMPT_LIBRARY
+
+
+class ActionType:
+    SMS_FOLLOWUP = "sms_followup"
+    NOTIFY_OWNER = "notify_owner"
 
 
 class IntakeService:
@@ -102,16 +108,31 @@ class IntakeService:
             from .llm import call_gemini
 
             missing = self.state_machine.missing_fields(session.ticket)
-            llm_result = await call_gemini(session, user_input, missing, self.settings)
-            if llm_result is not None:
-                regex_phone = extract_phone(user_input)
-                if regex_phone and not session.ticket.customer.phone:
-                    session.ticket.customer.phone = regex_phone
-                self._apply_llm_fields(session, llm_result.extracted_fields)
-                session.state = self.state_machine.resolve_state(session)
-                session.touch()
-                message = self._sanitize_llm_reply(llm_result.reply, session)
-                used_llm = message is not None
+            try:
+                # 🛑 VOICE CRITICAL FIX: Strict timeout so callers don't hang up
+                timeout_limit = 4.5 if session.ticket.channel == "phone" else 10.0
+                
+                llm_task = call_gemini(session, user_input, missing, self.settings)
+                llm_result = await asyncio.wait_for(llm_task, timeout=timeout_limit)
+                
+                if llm_result is not None:
+                    regex_phone = extract_phone(user_input)
+                    if regex_phone and not session.ticket.customer.phone:
+                        session.ticket.customer.phone = regex_phone
+                    self._apply_llm_fields(session, llm_result.extracted_fields)
+                    session.state = self.state_machine.resolve_state(session)
+                    session.touch()
+                    message = self._sanitize_llm_reply(llm_result.reply, session)
+                    used_llm = message is not None
+                    
+            except asyncio.TimeoutError:
+                logger.warning("LLM timed out after %s seconds for session %s", timeout_limit, session_id)
+                # Graceful fallback designed specifically for phone call lag
+                message = "I'm sorry, my system is running a little slow right now. Could you repeat that last part?"
+            except Exception as e:
+                logger.error("LLM generation failed for session %s: %s", session_id, e)
+                # Graceful fallback for full API crashes
+                message = "Sorry, my connection broke up for a second. What was that?"
 
         if message is None:
             message = self.state_machine.handle_turn(session, user_input)
@@ -227,11 +248,11 @@ class IntakeService:
         logger.info("OpenClaw action=%s review=%s followups=%d", parsed.action, parsed.human_review_needed, len(parsed.followups))
 
         for followup in parsed.followups:
-            if followup.type == "notify_owner" and self.settings.owner_phone and self.settings.owner_notifications_enabled:
+            if followup.type == ActionType.NOTIFY_OWNER and self.settings.owner_phone and self.settings.owner_notifications_enabled:
                 action = FollowupAction(
                     session_id=session.session_id,
                     ticket_id=ticket.ticket_id,
-                    action_type="notify_owner",
+                    action_type=ActionType.NOTIFY_OWNER,
                     channel="sms",
                     destination=self.settings.owner_phone,
                     reason="OpenClaw: owner notification",
@@ -243,7 +264,7 @@ class IntakeService:
                 action = FollowupAction(
                     session_id=session.session_id,
                     ticket_id=ticket.ticket_id,
-                    action_type="sms_followup",
+                    action_type=ActionType.SMS_FOLLOWUP,
                     channel="sms",
                     destination=ticket.customer.phone,
                     reason="OpenClaw: customer notification",
@@ -258,7 +279,7 @@ class IntakeService:
             action = FollowupAction(
                 session_id=session.session_id,
                 ticket_id=ticket.ticket_id,
-                action_type="notify_owner",
+                action_type=ActionType.NOTIFY_OWNER,
                 channel="sms",
                 destination=self.settings.owner_phone,
                 reason="Fallback owner notification",
@@ -298,7 +319,7 @@ class IntakeService:
         action = FollowupAction(
             session_id=session.session_id,
             ticket_id=ticket.ticket_id,
-            action_type="notify_owner",
+            action_type=ActionType.NOTIFY_OWNER,
             channel="sms",
             destination=self.settings.owner_phone,
             reason=reason,
@@ -372,7 +393,8 @@ class IntakeService:
     async def handle_voice_gather(self, payload: dict[str, Any]) -> dict[str, Any]:
         call_sid = payload.get("CallSid")
         speech_result = (payload.get("SpeechResult") or "").strip()
-        logger.info("Voice gather: CallSid=%s speech=%s", call_sid, speech_result[:80] if speech_result else "(empty)")
+        safe_speech = _sanitize_log_text(speech_result)
+        logger.info("Voice gather: CallSid=%s speech=%s", call_sid, safe_speech[:80] if safe_speech else "(empty)")
 
         session_id = self.repository.find_session_id_by_external_id(call_sid) if call_sid else None
         if not session_id:
@@ -438,7 +460,9 @@ class IntakeService:
     async def handle_sms_inbound(self, payload: dict[str, Any]) -> dict[str, Any]:
         from_number = normalize_phone(payload.get("From"))
         body = (payload.get("Body") or "").strip()
-        logger.info("SMS inbound from %s: %s", from_number or "unknown", body[:80])
+        safe_body = _sanitize_log_text(body)
+        logger.info("SMS inbound from %s: %s", from_number or "unknown", safe_body[:80])
+        
         session = self.repository.find_latest_session_by_phone(from_number) if from_number else None
         if not session or session.submitted_to_openclaw:
             session = self.start_session(phone=from_number, channel="sms")
@@ -530,7 +554,7 @@ class IntakeService:
         action = FollowupAction(
             session_id=session.session_id,
             ticket_id=session.ticket.ticket_id,
-            action_type="sms_followup",
+            action_type=ActionType.SMS_FOLLOWUP,
             channel="sms",
             destination=destination,
             reason=reason,
@@ -552,7 +576,7 @@ class IntakeService:
         if action.status not in ("pending", "failed"):
             return {"action_id": action_id, "status": action.status, "skipped": True, "reason": "not pending or failed"}
 
-        if action.action_type in ("sms_followup", "notify_owner") and action.destination:
+        if action.action_type in (ActionType.SMS_FOLLOWUP, ActionType.NOTIFY_OWNER) and action.destination:
             message = action.payload.get("suggested_message", "We have an update on your request.")
             result = await self._send_existing_followup(action, message)
             return result
@@ -625,3 +649,12 @@ def normalize_phone(value: str | None) -> str | None:
     if 7 <= len(digits) <= 15:
         return f"+{digits}"
     return None
+
+def _sanitize_log_text(text: str) -> str:
+    if not text:
+        return text
+    # Mask consecutive digits (likely phone, CC, or gate codes)
+    masked = re.sub(r'\d{4,}', '[REDACTED_NUM]', text)
+    # Mask potential emails
+    masked = re.sub(r'\S+@\S+', '[REDACTED_EMAIL]', masked)
+    return masked
