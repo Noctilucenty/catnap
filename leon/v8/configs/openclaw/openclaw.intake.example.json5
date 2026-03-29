@@ -1,0 +1,38 @@
+// Copy the relevant pieces into ~/.openclaw/openclaw.json
+// This keeps webhook ingress fixed to a dedicated agent and fixed hook session namespace.
+{
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/workspace",
+      userTimezone: "America/Los_Angeles",
+    },
+    list: [
+      {
+        id: "main",
+        default: true,
+        workspace: "~/.openclaw/workspace",
+      },
+      {
+        id: "intake-hooks",
+        name: "Intake Hooks",
+        workspace: "~/.openclaw/workspace-intake",
+        sandbox: { mode: "all", scope: "agent", workspaceAccess: "ro" },
+        tools: {
+          profile: "minimal",
+          allow: ["session_status"],
+          deny: ["group:fs", "group:runtime", "browser", "exec", "process", "write", "edit", "apply_patch"],
+        },
+      },
+    ],
+  },
+
+  hooks: {
+    enabled: true,
+    token: "${OPENCLAW_HOOKS_TOKEN}",
+    path: "/hooks",
+    defaultSessionKey: "hook:ingress",
+    allowRequestSessionKey: false,
+    allowedSessionKeyPrefixes: ["hook:"],
+    allowedAgentIds: ["intake-hooks"],
+  },
+}

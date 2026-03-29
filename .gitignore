@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# DB / runtime data
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Logs
+logs/
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Old zip starters
+leon/*.zip
+
+# OpenClaw runtime (secrets, sessions, memory)
+openclaw-workspace/**/.openclaw/
+openclaw-workspace/**/memory/
+openclaw-workspace/**/logs/
+
+# Node
+node_modules/
+
+# Ngrok
+.ngrok/
