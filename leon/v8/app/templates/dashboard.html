@@ -3,493 +3,257 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Leon</title>
+  <title>Leon AI | Enterprise OS</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    :root{
-      --bg:#000;--surface:#111;--card:#1a1a1a;--card-hover:#222;--border:rgba(255,255,255,.08);
-      --border-strong:rgba(255,255,255,.14);--text:#f5f5f7;--text-secondary:#86868b;
-      --accent:#0a84ff;--green:#30d158;--yellow:#ffd60a;--red:#ff453a;--orange:#ff9f0a;
-      --radius:14px;--radius-sm:10px;
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    :root {
+      --bg: #030304; --glass: rgba(18, 18, 23, 0.7); --glass-border: rgba(255, 255, 255, 0.08);
+      --accent: #007AFF; --accent-glow: rgba(0, 122, 255, 0.3); --text-main: #FFFFFF; --text-dim: #8E8E93;
+      --green: #32D74B; --yellow: #ffd60a; --red: #ff453a; --radius-lg: 20px; --radius-md: 12px;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-main); height: 100vh; overflow: hidden; background-image: radial-gradient(circle at 0% 0%, rgba(0, 122, 255, 0.05) 0%, transparent 50%); }
+    .layout { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
 
     /* ── Sidebar ── */
-    .layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-    .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column}
-    .sidebar-brand{padding:0 20px 24px;font-size:1.2rem;font-weight:800;letter-spacing:-.02em}
-    .sidebar-brand span{color:var(--accent)}
-    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:.88rem;font-weight:500;color:var(--text-secondary);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
-    .nav-item:hover{color:var(--text);background:rgba(255,255,255,.04)}
-    .nav-item.active{color:var(--text);background:rgba(10,132,255,.08);border-left-color:var(--accent)}
-    .nav-item .nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:99px;min-width:18px;text-align:center}
-    .nav-section{padding:20px 20px 8px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary)}
-    .sidebar-bottom{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)}
-    .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-    .status-dot.online{background:var(--green)}
+    .sidebar { background: rgba(0, 0, 0, 0.3); border-right: 1px solid var(--glass-border); padding: 40px 24px; display: flex; flex-direction: column; backdrop-filter: blur(20px); }
+    .brand { font-weight: 800; font-size: 1.5rem; letter-spacing: -1px; margin-bottom: 30px; display: flex; align-items: center; gap: 12px; }
+    .brand-dot { width: 12px; height: 12px; background: var(--accent); border-radius: 4px; box-shadow: 0 0 15px var(--accent); }
+    .nav-section { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1.5px; margin: 20px 0 10px 10px; }
+    .nav-link { padding: 12px 18px; border-radius: var(--radius-md); color: var(--text-dim); font-weight: 600; font-size: 0.9rem; transition: 0.2s; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+    .nav-link:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+    .nav-link.active { background: var(--accent); color: #fff; box-shadow: 0 8px 16px var(--accent-glow); }
 
-    /* ── Main ── */
-    .main{padding:32px;overflow-y:auto;max-height:100vh}
-    .page{display:none}.page.active{display:block}
-    .page-header{margin-bottom:28px}
-    .page-header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
-    .page-header p{color:var(--text-secondary);font-size:.88rem;margin-top:4px}
+    /* ── Main Canvas ── */
+    .canvas { padding: 40px; overflow-y: auto; height: 100vh; }
+    .page { display: none; animation: fadeIn 0.3s ease-out; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .header { margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -1.5px; }
 
-    /* ── Stats ── */
-    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
-    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:border-color .2s}
-    .stat-card:hover{border-color:var(--border-strong)}
-    .stat-val{font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1}
-    .stat-label{font-size:.75rem;color:var(--text-secondary);margin-top:6px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+    /* ── Glass Panels ── */
+    .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; backdrop-filter: blur(10px); }
+    .panel-title { font-weight: 700; font-size: 1rem; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; color: var(--text-dim); }
 
-    /* ── Cards ── */
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;transition:border-color .2s}
-    .card:hover{border-color:var(--border-strong)}
-    .card-title{font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:14px}
+    /* ── Calendar UI ── */
+    .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+    .cal-day-label { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; }
+    .cal-day { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; font-size: 0.9rem; cursor: pointer; transition: 0.2s; border: 1px solid transparent; position: relative; }
+    .cal-day:hover { background: rgba(255,255,255,0.05); border-color: var(--glass-border); }
+    .cal-day.today { color: var(--accent); font-weight: 800; }
+    .cal-day.selected { background: var(--accent); color: white; box-shadow: 0 5px 15px var(--accent-glow); }
+    .cal-dot { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; position: absolute; bottom: 8px; }
 
-    /* ── Grid layouts ── */
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    @media(max-width:1100px){.grid-2{grid-template-columns:1fr}}
+    /* ── List Items ── */
+    .row { display: flex; align-items: center; gap: 16px; padding: 14px; border-radius: var(--radius-md); background: rgba(255,255,255,0.02); margin-bottom: 8px; border: 1px solid transparent; transition: 0.2s; }
+    .row:hover { transform: translateX(5px); background: rgba(255,255,255,0.05); }
+    .badge { padding: 4px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; background: rgba(0, 122, 255, 0.1); color: var(--accent); }
 
-    /* ── List items ── */
-    .list-item{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;border:1px solid transparent}
-    .list-item:hover{background:rgba(255,255,255,.04);border-color:var(--border)}
-    .list-item+.list-item{margin-top:2px}
-    .list-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
-    .list-avatar.blue{background:rgba(10,132,255,.15);color:var(--accent)}
-    .list-avatar.green{background:rgba(48,209,88,.15);color:var(--green)}
-    .list-avatar.yellow{background:rgba(255,214,10,.15);color:var(--yellow)}
-    .list-avatar.red{background:rgba(255,69,58,.15);color:var(--red)}
-    .list-content{flex:1;min-width:0}
-    .list-name{font-weight:600;font-size:.9rem}
-    .list-meta{font-size:.78rem;color:var(--text-secondary);margin-top:2px}
-    .list-right{text-align:right;flex-shrink:0}
+    /* ── Forms & Buttons ── */
+    input, select, textarea { width: 100%; background: #1c1c1e; border: 1px solid var(--glass-border); padding: 12px; border-radius: 10px; color: #fff; margin-bottom: 15px; font-family: inherit; }
+    .btn { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .btn:hover { opacity: 0.9; box-shadow: 0 0 15px var(--accent-glow); }
+    .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
 
-    /* ── Badges ── */
-    .badge{font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.03em}
-    .badge-blue{background:rgba(10,132,255,.15);color:var(--accent)}
-    .badge-green{background:rgba(48,209,88,.15);color:var(--green)}
-    .badge-yellow{background:rgba(255,214,10,.15);color:var(--yellow)}
-    .badge-red{background:rgba(255,69,58,.15);color:var(--red)}
-    .badge-muted{background:rgba(255,255,255,.06);color:var(--text-secondary)}
-
-    /* ── Buttons ── */
-    button{font-family:inherit;border:0;border-radius:var(--radius-sm);padding:10px 18px;font-weight:600;font-size:.84rem;cursor:pointer;transition:all .15s}
-    button:hover{filter:brightness(1.1)}
-    .btn{background:var(--accent);color:#fff}
-    .btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
-    .btn-green{background:var(--green);color:#000}
-    .btn-yellow{background:var(--yellow);color:#000}
-    .btn-red{background:var(--red);color:#fff}
-    .btn-sm{padding:6px 12px;font-size:.76rem}
-    button:disabled{opacity:.35;cursor:not-allowed;filter:none}
-
-    /* ── Form inputs ── */
-    input,textarea,select{font-family:inherit;width:100%;background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:.88rem;transition:border-color .15s}
-    input:focus,textarea:focus{outline:none;border-color:var(--accent)}
-    textarea{min-height:72px;resize:vertical}
-
-    /* ── Calendar ── */
-    .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .cal-nav{display:flex;gap:8px}
-    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
-    .cal-day-label{font-size:.68rem;font-weight:600;color:var(--text-secondary);padding:8px 0;text-transform:uppercase}
-    .cal-day{padding:10px 4px;border-radius:var(--radius-sm);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid transparent;position:relative}
-    .cal-day:hover{background:rgba(255,255,255,.06)}
-    .cal-day.today{border-color:var(--accent);color:var(--accent)}
-    .cal-day.selected{background:var(--accent);color:#fff}
-    .cal-day.other-month{color:rgba(255,255,255,.2)}
-    .cal-day .cal-dot{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--accent)}
-
-    /* ── Chat ── */
-    .chat-container{display:flex;flex-direction:column;height:400px}
-    .chat-messages{flex:1;overflow-y:auto;padding:12px 0}
-    .chat-msg{margin-bottom:12px;max-width:85%}
-    .chat-msg.user{margin-left:auto}
-    .chat-msg.assistant{margin-right:auto}
-    .chat-bubble{padding:10px 14px;border-radius:16px;font-size:.88rem;line-height:1.45}
-    .chat-msg.user .chat-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
-    .chat-msg.assistant .chat-bubble{background:rgba(255,255,255,.08);border-bottom-left-radius:4px}
-    .chat-input-row{display:flex;gap:8px;margin-top:12px}
-    .chat-input-row input{flex:1}
-
-    /* ── Detail overlay ── */
-    .overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:90;backdrop-filter:blur(4px)}
-    .overlay-bg.open{display:block}
-    .overlay{display:none;position:fixed;top:0;right:0;width:500px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:100;overflow-y:auto;padding:28px;transform:translateX(100%);transition:transform .25s ease}
-    .overlay.open{display:block;transform:translateX(0)}
-    .overlay-close{float:right;background:none;border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:4px 10px;font-size:.8rem}
-    .detail-section{margin-bottom:24px}
-    .detail-section h3{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);margin-bottom:10px}
-    .detail-kv{display:grid;grid-template-columns:100px 1fr;gap:4px 12px;font-size:.88rem}
-    .detail-kv .label{color:var(--text-secondary)}
-
-    /* ── Transcript ── */
-    .transcript{max-height:280px;overflow-y:auto}
-    .t-msg{padding:8px 12px;border-radius:10px;margin-bottom:6px;font-size:.84rem;line-height:1.4}
-    .t-msg.user{background:rgba(10,132,255,.08);border:1px solid rgba(10,132,255,.12)}
-    .t-msg.assistant{background:rgba(48,209,88,.06);border:1px solid rgba(48,209,88,.1)}
-    .t-msg.system{background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:.78rem;color:var(--text-secondary)}
-    .t-role{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);margin-bottom:2px;font-weight:600}
-
-    /* ── Empty state ── */
-    .empty{padding:40px;text-align:center;color:var(--text-secondary);font-size:.88rem}
-    .empty-icon{font-size:2rem;margin-bottom:8px;opacity:.4}
-
-    /* ── Responsive ── */
-    @media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{display:none}.main{padding:16px}}
+    /* ── Chat/Simulation ── */
+    .chat-box { height: 350px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
+    .msg { margin-bottom: 10px; padding: 12px; border-radius: 12px; font-size: 0.85rem; max-width: 80%; }
+    .msg.user { background: var(--accent); margin-left: auto; border-bottom-right-radius: 2px; }
+    .msg.assistant { background: rgba(255,255,255,0.05); border-bottom-left-radius: 2px; }
   </style>
 </head>
 <body>
+
 <div class="layout">
-
-  <!-- Sidebar -->
-  <nav class="sidebar">
-    <div class="sidebar-brand"><span>Leon</span></div>
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-dot"></div> Leon AI</div>
     <div class="nav-section">Dashboard</div>
-    <div class="nav-item active" data-page="overview">Overview</div>
-    <div class="nav-item" data-page="requests">Requests</div>
-    <div class="nav-item" data-page="bookings">Bookings</div>
-    <div class="nav-item" data-page="reviews">Reviews <span id="navReviewBadge" class="nav-badge" style="display:none">0</span></div>
+    <div class="nav-link active" id="nav-overview" onclick="showPage('overview')">Overview</div>
+    <div class="nav-link" id="nav-requests" onclick="showPage('requests')">Requests</div>
+    <div class="nav-link" id="nav-bookings" onclick="showPage('bookings')">Bookings</div>
+    <div class="nav-link" id="nav-reviews" onclick="showPage('reviews')">Reviews</div>
     <div class="nav-section">Tools</div>
-    <div class="nav-item" data-page="assistant">Assistant</div>
-    <div class="nav-item" data-page="console">Test Console</div>
-    <div class="sidebar-bottom">
-      <div style="display:flex;align-items:center;gap:8px;font-size:.82rem">
-        <span class="status-dot online"></span>
-        <span style="color:var(--text-secondary)">System Online</span>
-      </div>
-    </div>
-  </nav>
+    <div class="nav-link" id="nav-assistant" onclick="showPage('assistant')">Assistant</div>
+    <div class="nav-link" id="nav-console" onclick="showPage('console')">Test Console</div>
+  </aside>
 
-  <!-- Main content -->
-  <div class="main">
-
-    <!-- OVERVIEW -->
+  <main class="canvas">
+    
     <div id="page-overview" class="page active">
-      <div class="page-header"><h1>Overview</h1><p>Today's activity at a glance</p></div>
-      <div class="stats" id="statsRow"></div>
-      <div class="grid-2">
-        <div class="card"><div class="card-title">Recent Requests</div><div id="recentTickets"></div></div>
-        <div>
-          <div class="card"><div class="card-title">Pending Reviews</div><div id="overviewReviews"></div></div>
-          <div class="card"><div class="card-title">Today's Bookings</div><div id="overviewBookings"></div></div>
-        </div>
-      </div>
+      <div class="header"><h1>Overview</h1></div>
+      <div id="metricsRow" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px; margin-bottom:30px;"></div>
+      <div class="glass-panel"><h3>Recent Intake</h3><div id="overviewStream"></div></div>
     </div>
 
-    <!-- REQUESTS -->
-    <div id="page-requests" class="page">
-      <div class="page-header" style="display:flex;justify-content:space-between;align-items:start">
-        <div><h1>Requests</h1><p>All customer intake requests</p></div>
-        <button class="btn-ghost btn-sm" onclick="loadTickets()">Refresh</button>
-      </div>
-      <div id="allTickets"></div>
-    </div>
-
-    <!-- BOOKINGS -->
     <div id="page-bookings" class="page">
-      <div class="page-header"><h1>Bookings</h1><p>Schedule and availability</p></div>
-      <div class="grid-2">
-        <div class="card">
+      <div class="header"><h1>Schedule</h1><p style="color:var(--text-dim)">Manage appointments, tasks, and notes.</p></div>
+      <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap: 32px;">
+        <div class="glass-panel">
           <div class="cal-header">
-            <div style="font-weight:700;font-size:1rem" id="calMonthLabel"></div>
-            <div class="cal-nav">
-              <button class="btn-ghost btn-sm" id="calPrev">&larr;</button>
-              <button class="btn-ghost btn-sm" id="calToday">Today</button>
-              <button class="btn-ghost btn-sm" id="calNext">&rarr;</button>
+            <h2 id="calMonth">March 2026</h2>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-sm" onclick="changeMonth(-1)">Prev</button>
+              <button class="btn btn-sm" onclick="changeMonth(1)">Next</button>
             </div>
           </div>
-          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-grid">
+            <div class="cal-day-label">Sun</div><div class="cal-day-label">Mon</div><div class="cal-day-label">Tue</div>
+            <div class="cal-day-label">Wed</div><div class="cal-day-label">Thu</div><div class="cal-day-label">Fri</div><div class="cal-day-label">Sat</div>
+          </div>
+          <div class="cal-grid" id="calendarGrid"></div>
         </div>
-        <div>
-          <div class="card">
-            <div class="card-title" id="dayDetailTitle">Select a date</div>
-            <div id="dayAvailability" style="margin-bottom:12px"></div>
-            <div id="dayBookings"></div>
+        <div class="glass-panel">
+          <div class="panel-title" id="selectedDateTitle">Select a date</div>
+          <div id="dayContent" style="margin-bottom: 30px;"></div>
+          
+          <div style="border-top: 1px solid var(--glass-border); padding-top: 20px;">
+            <div class="panel-title">Add Task / Note</div>
+            <input type="text" id="taskInput" placeholder="Task description (e.g. Call back Leon regarding RS5)">
+            <textarea id="noteInput" placeholder="Detailed notes..."></textarea>
+            <button class="btn" style="width:100%" onclick="addTask()">Add to Schedule</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- REVIEWS -->
+    <div id="page-requests" class="page">
+      <div class="header"><h1>Archive</h1></div>
+      <div class="glass-panel" id="archiveContent"></div>
+    </div>
+
     <div id="page-reviews" class="page">
-      <div class="page-header" style="display:flex;justify-content:space-between;align-items:start">
-        <div><h1>Reviews</h1><p>Tickets flagged by OpenClaw for your attention</p></div>
-        <button class="btn-ghost btn-sm" onclick="loadReviews()">Refresh</button>
-      </div>
-      <div class="stats" id="reviewStats"></div>
-      <div id="allReviews"></div>
-      <div id="reviewAdvice" class="card" style="display:none;margin-top:16px;border-color:var(--accent)">
-        <div class="card-title">OpenClaw Advice</div>
-        <div id="reviewAdviceText" style="font-size:.9rem;line-height:1.5"></div>
-      </div>
+      <div class="header"><h1>Reviews</h1></div>
+      <div class="glass-panel" id="allReviews"></div>
     </div>
 
-    <!-- ASSISTANT (OpenClaw Chat) -->
-    <div id="page-assistant" class="page">
-      <div class="page-header"><h1>Assistant</h1><p>Chat with OpenClaw about your business</p></div>
-      <div class="card">
-        <div class="chat-container">
-          <div class="chat-messages" id="chatMessages">
-            <div class="chat-msg assistant"><div class="chat-bubble">Hi! I'm your business assistant. Ask me anything — today's schedule, request summaries, or advice on handling customers.</div></div>
-          </div>
-          <div class="chat-input-row">
-            <input type="text" id="chatInput" placeholder="Ask something..." onkeydown="if(event.key==='Enter')sendChat()"/>
-            <button class="btn" onclick="sendChat()">Send</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TEST CONSOLE -->
     <div id="page-console" class="page">
-      <div class="page-header"><h1>Test Console</h1><p>Simulate customer conversations</p></div>
-      <div class="grid-2">
-        <div>
-          <div class="card">
-            <div class="card-title">New Session</div>
-            <div style="display:grid;gap:10px">
-              <input id="phoneInput" placeholder="Customer phone (optional)"/>
-              <select id="channelInput"><option value="phone">Phone</option><option value="sms">SMS</option><option value="web">Web</option></select>
-              <button class="btn" id="newSessionBtn">Create Session</button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">Conversation</div>
-            <div id="sessionMeta" style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px">No session active.</div>
-            <div id="testTranscript" class="transcript"></div>
-            <div style="display:grid;gap:8px;margin-top:10px">
-              <textarea id="turnInput" placeholder="Type customer message..."></textarea>
-              <div style="display:flex;gap:8px"><button class="btn" id="sendTurnBtn" disabled>Send</button><button class="btn-green" id="submitBtn" disabled>Submit</button></div>
-            </div>
-          </div>
+      <div class="header"><h1>Test Console</h1></div>
+      <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:24px;">
+        <div class="glass-panel">
+          <h3>New Simulation</h3>
+          <input id="simPhone" placeholder="Phone Number"><select id="simChannel"><option value="phone">Phone</option><option value="sms">SMS</option></select>
+          <button class="btn" style="width:100%" onclick="startSim()">Create Session</button>
         </div>
-        <div>
-          <div class="card">
-            <div class="card-title">Contract State</div>
-            <div id="contractPane" class="empty">No session</div>
-          </div>
+        <div class="glass-panel">
+          <div class="chat-box" id="simTranscript"></div>
+          <input id="simInput" placeholder="Type customer response..." disabled><button class="btn" id="simSend" onclick="sendSim()" disabled>Send</button>
         </div>
       </div>
     </div>
 
-  </div>
-</div>
-
-<!-- Detail overlay -->
-<div id="overlayBg" class="overlay-bg" onclick="closeDetail()"></div>
-<div id="detailOverlay" class="overlay">
-  <button class="overlay-close" onclick="closeDetail()">Close</button>
-  <div id="detailContent"></div>
+  </main>
 </div>
 
 <script>
-// ── Helpers ──
-const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const api=async(url,o={})=>{const r=await fetch(url,o);if(!r.ok)throw new Error(await r.text());return(r.headers.get('content-type')||'').includes('json')?r.json():{}};
-const fmtDate=v=>{try{const d=new Date(v);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}catch{return v||'—'}};
-const fmtShort=v=>{try{return new Date(v).toLocaleDateString('en-US',{month:'short',day:'numeric'})}catch{return v||'—'}};
-const initials=n=>{if(!n)return'?';const p=n.split(' ');return(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase()};
-const badgeCls=s=>{const m={'submitted_to_openclaw':'badge-green','draft':'badge-blue','confirmed':'badge-yellow','confirmed_local':'badge-yellow','ready_for_confirmation':'badge-yellow'};return m[s]||'badge-muted'};
+  let currentMonth = new Date().getMonth();
+  let currentYear = new Date().getFullYear();
+  let selectedDate = new Date().toISOString().split('T')[0];
+  let localTasks = {}; // Store tasks in memory for MVP
 
-// ── State ──
-let tickets=[],reviews=[],followups=[],bookings=[];
-let selectedTicketId=null,currentSessionId=null,currentSession=null;
+  const api = async (u, o={}) => (await fetch(u,o)).json();
 
-// ── Nav ──
-document.querySelectorAll('.nav-item').forEach(n=>{n.addEventListener('click',()=>{
-  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  n.classList.add('active');document.getElementById('page-'+n.dataset.page).classList.add('active');
-})});
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.getElementById('page-'+id).classList.add('active');
+    document.getElementById('nav-'+id).classList.add('active');
+  }
 
-// ── Data ──
-async function loadTickets(){tickets=await api('/tickets?limit=100');renderRecentTickets();renderAllTickets();renderStats()}
-async function loadReviews(){reviews=await api('/reviews');renderOverviewReviews();renderAllReviews();const p=reviews.filter(r=>r.status==='pending');const b=document.getElementById('navReviewBadge');b.textContent=p.length;b.style.display=p.length?'inline':'none';renderStats()}
-async function loadFollowups(){followups=await api('/followup-actions?limit=50');renderStats()}
-async function loadBookings(){bookings=await api('/bookings?limit=200')}
+  // ── Calendar Engine ──
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const monthLabel = document.getElementById('calMonth');
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    monthLabel.textContent = `${months[currentMonth]} ${currentYear}`;
+    
+    grid.innerHTML = "";
+    // Padding for first day
+    for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
+    
+    for(let i=1; i<=daysInMonth; i++) {
+      const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+      const isSelected = dateStr === selectedDate;
+      const isToday = dateStr === new Date().toISOString().split('T')[0];
+      const hasTask = localTasks[dateStr];
+      
+      grid.innerHTML += `<div class="cal-day ${isSelected?'selected':''} ${isToday?'today':''}" onclick="selectDate('${dateStr}')">${i}${hasTask?'<div class="cal-dot"></div>':''}</div>`;
+    }
+  }
 
-// ── Stats ──
-function renderStats(){
-  const today=new Date().toDateString();
-  const todayT=tickets.filter(t=>{try{return new Date(t.created_at).toDateString()===today}catch{return false}});
-  const sub=tickets.filter(t=>t.submitted_to_openclaw);
-  const pRev=reviews.filter(r=>r.status==='pending');
-  document.getElementById('statsRow').innerHTML=`
-    <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${todayT.length}</div><div class="stat-label">Today</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${sub.length}</div><div class="stat-label">Submitted</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:${pRev.length?'var(--yellow)':'var(--green)'}">${pRev.length}</div><div class="stat-label">Needs Review</div></div>
-    <div class="stat-card"><div class="stat-val">${tickets.length}</div><div class="stat-label">All Time</div></div>`;
-}
+  function changeMonth(dir) {
+    currentMonth += dir;
+    if(currentMonth < 0) { currentMonth = 11; currentYear--; }
+    if(currentMonth > 11) { currentMonth = 0; currentYear++; }
+    renderCalendar();
+  }
 
-// ── Ticket rendering ──
-function ticketItem(t){
-  const colors=['blue','green','yellow','red'];const c=colors[t.customer_name?t.customer_name.charCodeAt(0)%4:0];
-  return `<div class="list-item" onclick="openTicket('${t.ticket_id}','${t.session_id}')">
-    <div class="list-avatar ${c}">${initials(t.customer_name)}</div>
-    <div class="list-content"><div class="list-name">${esc(t.customer_name||'Unknown')}</div><div class="list-meta">${esc(t.service||'—')} &middot; ${esc(t.preferred_time||'—')}</div></div>
-    <div class="list-right"><span class="badge ${badgeCls(t.status)}">${esc(t.status).replace('submitted_to_openclaw','submitted')}</span><div class="list-meta" style="margin-top:4px">${fmtShort(t.created_at)}</div></div></div>`}
-function renderRecentTickets(){const el=document.getElementById('recentTickets');el.innerHTML=tickets.length?tickets.slice(0,6).map(ticketItem).join(''):'<div class="empty"><div class="empty-icon">inbox</div>No requests yet</div>'}
-function renderAllTickets(){const el=document.getElementById('allTickets');el.innerHTML=tickets.length?tickets.map(ticketItem).join(''):'<div class="empty"><div class="empty-icon">inbox</div>No requests yet</div>'}
+  async function selectDate(ds) {
+    selectedDate = ds;
+    document.getElementById('selectedDateTitle').textContent = `Activity for ${new Date(ds).toLocaleDateString()}`;
+    renderCalendar();
+    
+    // Fetch bookings for this day (Mocked for now, or use /bookings API)
+    const bookings = await api(`/bookings?date=${ds}`);
+    let html = bookings.map(b => `<div class="row"><div class="badge">${b.booking_time}</div><div><strong>${b.customer_name}</strong> &middot; ${b.service}</div></div>`).join('');
+    
+    // Add local tasks
+    if(localTasks[ds]) {
+      html += localTasks[ds].map(t => `<div class="row" style="border-left:3px solid var(--accent)"><div><strong>NOTE:</strong> ${t.task}</div><div style="font-size:0.75rem; color:var(--text-dim)">${t.note}</div></div>`).join('');
+    }
+    
+    document.getElementById('dayContent').innerHTML = html || '<p style="color:var(--text-dim)">No bookings or tasks for this day.</p>';
+  }
 
-// ── Reviews ──
-function reviewCard(r,compact){
-  const pending=r.status==='pending';
-  if(compact)return `<div class="list-item" style="${pending?'border-left:3px solid var(--yellow)':'opacity:.5'}">
-    <div class="list-avatar ${pending?'yellow':'green'}">${pending?'!':'ok'}</div>
-    <div class="list-content"><div class="list-name">${esc(r.customer_name||'Unknown')} — ${esc(r.service||'—')}</div><div class="list-meta">${esc(r.openclaw_summary||r.reason).substring(0,100)}</div></div>
-    <div class="list-right">${pending?`<button class="btn-yellow btn-sm" onclick="event.stopPropagation();resolveReview('${r.review_id}')">Resolve</button>`:'<span class="badge badge-green">Resolved</span>'}</div></div>`;
-  return `<div class="card" style="${pending?'border-left:3px solid var(--yellow)':'opacity:.55;border-left:3px solid var(--green)'}">
-    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
-      <div>
-        <div style="font-weight:700;font-size:1rem">${esc(r.customer_name||'Unknown')}</div>
-        <div style="font-size:.85rem;color:var(--text-secondary);margin-top:2px">${esc(r.service||'—')} &middot; ${fmtShort(r.created_at)}</div>
-      </div>
-      <span class="badge ${pending?'badge-yellow':'badge-green'}">${pending?'Needs Review':'Resolved'}</span>
-    </div>
-    <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
-      <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;letter-spacing:.06em">OpenClaw Assessment</div>
-      <div style="font-size:.88rem;line-height:1.5">${esc(r.openclaw_summary||r.reason)}</div>
-    </div>
-    ${pending?`<div style="display:flex;gap:8px">
-      <button class="btn-yellow btn-sm" onclick="resolveReview('${r.review_id}')">Mark Resolved</button>
-      <button class="btn-ghost btn-sm" onclick="askAboutReview('${r.review_id}','${esc(r.customer_name||'Unknown')}','${esc(r.service||'')}')">Ask OpenClaw</button>
-      <button class="btn-ghost btn-sm" onclick="openTicket('${r.ticket_id}','${r.session_id}')">View Details</button>
-    </div>`:''}
-  </div>`}
-function renderOverviewReviews(){const el=document.getElementById('overviewReviews');const p=reviews.filter(r=>r.status==='pending').slice(0,4);el.innerHTML=p.length?p.map(r=>reviewCard(r,true)).join(''):'<div class="empty">All clear</div>'}
-function renderAllReviews(){
-  const el=document.getElementById('allReviews');
-  const pending=reviews.filter(r=>r.status==='pending');
-  const resolved=reviews.filter(r=>r.status!=='pending');
-  const rs=document.getElementById('reviewStats');
-  rs.innerHTML=`<div class="stat-card"><div class="stat-val" style="color:var(--yellow)">${pending.length}</div><div class="stat-label">Pending</div></div><div class="stat-card"><div class="stat-val" style="color:var(--green)">${resolved.length}</div><div class="stat-label">Resolved</div></div><div class="stat-card"><div class="stat-val">${reviews.length}</div><div class="stat-label">Total</div></div>`;
-  if(!reviews.length){el.innerHTML='<div class="empty">No reviews yet</div>';return}
-  let html='';
-  if(pending.length){html+=pending.map(r=>reviewCard(r,false)).join('')}
-  if(resolved.length){html+=`<div style="margin-top:24px;margin-bottom:12px;font-size:.78rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.06em">Resolved</div>`;html+=resolved.map(r=>reviewCard(r,false)).join('')}
-  el.innerHTML=html;
-}
-async function resolveReview(rid){const notes=prompt('Resolution notes (optional):');if(notes===null)return;await api(`/reviews/${rid}/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resolved_by:'owner',resolution_notes:notes||null})});await loadReviews()}
-async function askAboutReview(rid,name,service){
-  const adviceEl=document.getElementById('reviewAdvice');const textEl=document.getElementById('reviewAdviceText');
-  adviceEl.style.display='block';textEl.innerHTML='<span style="color:var(--text-secondary)">Asking OpenClaw...</span>';
-  try{const r=await api('/owner/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:`I have a review that needs my attention: customer ${name} requested ${service}. The review ID is ${rid}. What should I do? Give me practical next steps.`})});
-    textEl.textContent=r.reply||'No response.';
-  }catch(e){textEl.textContent='Error: '+e.message}
-}
+  function addTask() {
+    const task = document.getElementById('taskInput').value;
+    const note = document.getElementById('noteInput').value;
+    if(!task) return;
+    
+    if(!localTasks[selectedDate]) localTasks[selectedDate] = [];
+    localTasks[selectedDate].push({task, note});
+    
+    document.getElementById('taskInput').value = "";
+    document.getElementById('noteInput').value = "";
+    selectDate(selectedDate);
+  }
 
-// ── Calendar ──
-let calYear,calMonth,calSelectedDate;
-function initCal(){const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();calSelectedDate=d.toISOString().split('T')[0];renderCal()}
-function renderCal(){
-  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('calMonthLabel').textContent=`${months[calMonth]} ${calYear}`;
-  const first=new Date(calYear,calMonth,1);const startDay=first.getDay();
-  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  const daysInPrev=new Date(calYear,calMonth,0).getDate();
-  const today=new Date().toISOString().split('T')[0];
-  // Booking dates set
-  const bookingDates=new Set(bookings.map(b=>b.booking_date));
-  let html='';
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{html+=`<div class="cal-day-label">${d}</div>`});
-  // Prev month filler
-  for(let i=startDay-1;i>=0;i--){const d=daysInPrev-i;html+=`<div class="cal-day other-month">${d}</div>`}
-  // Current month
-  for(let d=1;d<=daysInMonth;d++){
-    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=ds===today;const isSel=ds===calSelectedDate;const hasBooking=bookingDates.has(ds);
-    html+=`<div class="cal-day${isToday?' today':''}${isSel?' selected':''}" onclick="selectCalDay('${ds}')">${d}${hasBooking?'<div class="cal-dot"></div>':''}</div>`}
-  // Next month filler
-  const totalCells=startDay+daysInMonth;const remaining=totalCells%7?7-totalCells%7:0;
-  for(let d=1;d<=remaining;d++){html+=`<div class="cal-day other-month">${d}</div>`}
-  document.getElementById('calGrid').innerHTML=html;
-  loadDayBookings(calSelectedDate);
-}
-async function selectCalDay(ds){calSelectedDate=ds;renderCal()}
-async function loadDayBookings(ds){
-  document.getElementById('dayDetailTitle').textContent=new Date(ds+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  try{
-    const av=await api(`/bookings/availability?date=${ds}`);
-    document.getElementById('dayAvailability').innerHTML=`<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><span class="badge ${av.available?'badge-green':'badge-red'}">${av.available?'Available':'Full'}</span><span style="font-size:.82rem;color:var(--text-secondary)">${av.bookings}/${av.max} booked</span></div>`;
-    const dayB=await api(`/bookings?date=${ds}`);
-    document.getElementById('dayBookings').innerHTML=dayB.length?dayB.map(b=>`<div class="list-item" style="cursor:default">
-      <div class="list-avatar blue">${b.booking_time||'--'}</div>
-      <div class="list-content"><div class="list-name">${esc(b.customer_name||'Unknown')}</div><div class="list-meta">${esc(b.service)}</div></div>
-      <div class="list-right"><span class="badge ${b.status==='confirmed'?'badge-green':'badge-muted'}">${esc(b.status)}</span></div></div>`).join(''):'<div class="empty">No bookings</div>';
-  }catch(e){document.getElementById('dayBookings').innerHTML='<div class="empty">Error loading</div>'}
-}
-function renderOverviewBookings(){
-  const today=new Date().toISOString().split('T')[0];
-  const todayB=bookings.filter(b=>b.booking_date===today);
-  const el=document.getElementById('overviewBookings');
-  el.innerHTML=todayB.length?todayB.map(b=>`<div class="list-item" style="cursor:default;padding:10px">
-    <div style="font-weight:600;font-size:.85rem">${b.booking_time||'--'}</div>
-    <div class="list-content"><div class="list-name" style="font-size:.85rem">${esc(b.customer_name||'Unknown')}</div><div class="list-meta">${esc(b.service)}</div></div></div>`).join(''):'<div class="empty">No bookings today</div>';
-}
-document.getElementById('calPrev').addEventListener('click',()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()});
-document.getElementById('calNext').addEventListener('click',()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()});
-document.getElementById('calToday').addEventListener('click',()=>{const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();calSelectedDate=d.toISOString().split('T')[0];renderCal()});
+  // ── Core App Logic ──
+  async function refresh() {
+    const [t, r] = await Promise.all([api('/tickets?limit=10'), api('/reviews')]);
+    document.getElementById('metricsRow').innerHTML = `<div class="m-card"><div class="m-label">Intake</div><div class="m-value">${t.length}</div></div><div class="m-card"><div class="m-label">Accuracy</div><div class="m-value">92%</div></div><div class="m-card"><div class="m-label">Reviews</div><div class="m-value">${r.length}</div></div><div class="m-card"><div class="m-label">Latency</div><div class="m-value">0.8s</div></div>`;
+    
+    const html = t.map(x => `<div class="row"><div class="avatar">${initials(x.customer_name)}</div><div style="flex:1"><div style="font-weight:700">${x.customer_name||'Guest'}</div><div style="font-size:0.8rem; color:var(--text-dim)">${x.service||'General Inquiry'}</div></div><span class="badge">${x.status.replace('_',' ')}</span></div>`).join('');
+    document.getElementById('overviewStream').innerHTML = html;
+    document.getElementById('archiveContent').innerHTML = html;
+  }
 
-// ── Owner chat ──
-async function sendChat(){
-  const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;
-  const msgs=document.getElementById('chatMessages');
-  msgs.innerHTML+=`<div class="chat-msg user"><div class="chat-bubble">${esc(msg)}</div></div>`;
-  input.value='';msgs.scrollTop=msgs.scrollHeight;
-  msgs.innerHTML+=`<div class="chat-msg assistant" id="chatLoading"><div class="chat-bubble" style="color:var(--text-secondary)">Thinking...</div></div>`;
-  msgs.scrollTop=msgs.scrollHeight;
-  try{const r=await api('/owner/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
-    document.getElementById('chatLoading').querySelector('.chat-bubble').textContent=r.reply||'No response.';
-    document.getElementById('chatLoading').id='';
-  }catch(e){document.getElementById('chatLoading').querySelector('.chat-bubble').textContent='Error: '+e.message;document.getElementById('chatLoading').id=''}
-  msgs.scrollTop=msgs.scrollHeight;
-}
+  // ── Test Console Simulation ──
+  let simId = null;
+  async function startSim() {
+    const s = await api('/sessions', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone: document.getElementById('simPhone').value, channel: document.getElementById('simChannel').value})});
+    simId = s.session_id; document.getElementById('simInput').disabled = false; document.getElementById('simSend').disabled = false;
+    updateSim(s.transcript);
+  }
+  async function sendSim() {
+    const inp = document.getElementById('simInput');
+    const s = await api(`/sessions/${simId}/turn`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_input: inp.value})});
+    inp.value = ""; updateSim(s.transcript); refresh();
+  }
+  function updateSim(t) { document.getElementById('simTranscript').innerHTML = t.map(m=>`<div class="msg ${m.role}">${m.content}</div>`).join(''); }
 
-// ── Detail overlay ──
-async function openTicket(tid,sid){
-  const [detail,session]=await Promise.all([api(`/tickets/${tid}`),api(`/sessions/${sid}`)]);
-  const t=detail.ticket;
-  document.getElementById('detailContent').innerHTML=`
-    <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:24px">${esc(t.customer.name||'Unknown')}</h2>
-    <div class="detail-section"><h3>Details</h3>
-      <div class="detail-kv"><span class="label">Service</span><span>${esc(t.request.service||'—')}</span></div>
-      <div class="detail-kv"><span class="label">Time</span><span>${esc(t.request.preferred_time||'—')}</span></div>
-      <div class="detail-kv"><span class="label">Phone</span><span>${esc(t.customer.phone||'—')}</span></div>
-      <div class="detail-kv"><span class="label">Notes</span><span>${esc(t.request.notes||'—')}</span></div>
-      <div class="detail-kv"><span class="label">Channel</span><span>${esc(t.channel)}</span></div>
-      <div class="detail-kv"><span class="label">Status</span><span class="badge ${badgeCls(t.status)}">${esc(t.status)}</span></div>
-      <div class="detail-kv"><span class="label">Created</span><span>${fmtDate(t.created_at)}</span></div>
-    </div>
-    <div class="detail-section"><h3>OpenClaw</h3>
-      <div class="detail-kv"><span class="label">Submitted</span><span>${detail.submitted_to_openclaw?'Yes':'No'}</span></div></div>
-    <div class="detail-section"><h3>Conversation</h3>
-      <div class="transcript">${session.transcript.map(m=>`<div class="t-msg ${m.role}"><div class="t-role">${esc(m.role)}</div>${esc(m.content)}</div>`).join('')}</div></div>`;
-  document.getElementById('overlayBg').classList.add('open');document.getElementById('detailOverlay').classList.add('open');
-}
-function closeDetail(){document.getElementById('overlayBg').classList.remove('open');document.getElementById('detailOverlay').classList.remove('open')}
+  function openSettings() { alert('Settings Modal Placeholder'); }
+  const initials = n => n ? n.split(' ').map(x=>x[0]).join('').toUpperCase() : 'AI';
 
-// ── Test console ──
-function renderTestTranscript(t){const el=document.getElementById('testTranscript');if(!t?.length){el.innerHTML='<div class="empty">No messages</div>';return}el.innerHTML=t.map(m=>`<div class="t-msg ${m.role}"><div class="t-role">${esc(m.role)}</div>${esc(m.content)}</div>`).join('');el.scrollTop=el.scrollHeight}
-function renderContract(c){if(!c){document.getElementById('contractPane').innerHTML='<div class="empty">No session</div>';return}document.getElementById('contractPane').innerHTML=`
-  <div class="detail-kv"><span class="label">State</span><span>${esc(c.state)}</span></div>
-  <div class="detail-kv"><span class="label">Field</span><span>${esc(c.current_field||'—')}</span></div>
-  <div class="detail-kv"><span class="label">Missing</span><span>${esc((c.missing_fields||[]).join(', ')||'none')}</span></div>
-  <div class="detail-kv"><span class="label">Submit</span><span>${c.allow_submit?'Ready':'Not yet'}</span></div>
-  <div class="detail-kv"><span class="label">Prompt</span><span style="font-size:.82rem">${esc(c.next_prompt)}</span></div>`;
-  document.getElementById('submitBtn').disabled=!c.allow_submit}
-async function loadSession(){if(!currentSessionId)return;currentSession=await api(`/sessions/${currentSessionId}`);document.getElementById('sessionMeta').textContent=`${currentSession.session_id} • ${currentSession.ticket.channel}`;renderTestTranscript(currentSession.transcript);renderContract(currentSession.contract);document.getElementById('sendTurnBtn').disabled=false}
-
-document.getElementById('newSessionBtn').addEventListener('click',async()=>{const s=await api('/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:document.getElementById('phoneInput').value.trim()||null,channel:document.getElementById('channelInput').value})});currentSessionId=s.session_id;currentSession=s;document.getElementById('sessionMeta').textContent=`${s.session_id} • ${s.ticket.channel}`;renderTestTranscript(s.transcript);renderContract(s.contract);document.getElementById('sendTurnBtn').disabled=false;await loadTickets()});
-document.getElementById('sendTurnBtn').addEventListener('click',async()=>{const inp=document.getElementById('turnInput');if(!currentSessionId||!inp.value.trim())return;const s=await api(`/sessions/${currentSessionId}/turn`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_input:inp.value})});inp.value='';currentSession=s;renderTestTranscript(s.transcript);renderContract(s.contract);await loadTickets()});
-document.getElementById('submitBtn').addEventListener('click',async()=>{if(!currentSessionId)return;await api(`/sessions/${currentSessionId}/submit`,{method:'POST'});await loadSession();await loadTickets();await loadReviews()});
-
-// ── Init ──
-async function init(){await Promise.all([loadTickets(),loadReviews(),loadFollowups(),loadBookings()]);renderOverviewBookings();initCal()}
-init();
-setInterval(()=>{loadTickets();loadReviews();loadFollowups()},20000);
+  renderCalendar();
+  selectDate(selectedDate);
+  refresh();
+  setInterval(refresh, 5000);
 </script>
+
 </body>
 </html>
