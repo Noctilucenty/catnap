@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from .extraction import apply_extractions
@@ -87,6 +86,15 @@ class IntakeStateMachine:
             return self._handle_confirmation(session, text)
         if current_state == SessionState.CORRECTION:
             return self._handle_correction(session, text)
+
+        # Handle "no notes" explicitly before anything else
+        if current_state == SessionState.COLLECT_NOTES and lowered in {
+            "no", "n", "none", "nope", "nothing", "thats all", "that's all", "skip", "no notes"
+        }:
+            session.ticket.request.notes = ""
+            session.state = self.resolve_state(session)
+            session.touch()
+            return self.message_for_state(session)
 
         if current_state == SessionState.COLLECT_SERVICE and lowered in {"help", "?"}:
             return "You can say something like oil change, tire exchange, haircut, consultation, repair, or appointment. What service do you need?"
