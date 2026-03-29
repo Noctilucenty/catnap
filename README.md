@@ -1,4 +1,4 @@
-# Leon
+# catnap
 
 AI-powered call and SMS intake system for small businesses. Customers call or text, a voice AI collects their info, the backend processes it, and the shop owner gets notified with actionable recommendations.
 
